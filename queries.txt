@@ -1,0 +1,9 @@
+1. Who is arriving on a specific date?
+2. What charges are associated with a specific stay?
+3. Who are the top corporate clients?
+4. What rooms are available during a given date range?
+5. Which of the available rooms has been booked the most?
+6. What is the average attendance for events in a given date range?
+7. Which reader locations have the most swipes?
+8. What is the monthly revenue by hotel?
+9. Which meeting rooms have the most total events?
