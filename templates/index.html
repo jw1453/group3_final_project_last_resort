@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Reservations & Room Assignment{% endblock %}
+
+{% block content %}
+<h1 class="mb-1">Reservations &amp; Room Assignment</h1>
+<p class="text-muted mb-4">Search availability and review activity by date range</p>
+
+<!-- ── Filters ── -->
+<div class="filter-card mb-4">
+    <form method="GET" action="{{ url_for('home') }}" class="row g-3 align-items-end">
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">Start Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">End Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">Hotel</label>
+            <select name="hotel_id" class="form-select">
+                <option value="">All Hotels</option>
+                {% for h in hotels %}
+                <option value="{{ h.hotelId }}" {% if selected_hotel_id == h.hotelId %}selected{% endif %}>{{ h.hotelName }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">Bed Type</label>
+            <select name="bed_type" class="form-select">
+                <option value="">Any</option>
+                <option value="king"   {% if bed_type=='king'   %}selected{% endif %}>King</option>
+                <option value="queen"  {% if bed_type=='queen'  %}selected{% endif %}>Queen</option>
+                <option value="double" {% if bed_type=='double' %}selected{% endif %}>Double</option>
+                <option value="double_xl" {% if bed_type=='double_xl' %}selected{% endif %}>Double XL</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">Proximity</label>
+            <select name="proximity" class="form-select">
+                <option value="">Any</option>
+                <option value="Pool"        {% if proximity=='Pool'        %}selected{% endif %}>Pool</option>
+                <option value="City View"   {% if proximity=='City View'   %}selected{% endif %}>City View</option>
+                <option value="Garden View" {% if proximity=='Garden View' %}selected{% endif %}>Garden View</option>
+                <option value="Parking"     {% if proximity=='Parking'     %}selected{% endif %}>Parking</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">Min Rating</label>
+            <select name="min_rating" class="form-select">
+                <option value="">Any</option>
+                {% for s in [1,2,3,4,5] %}
+                <option value="{{ s }}" {% if min_rating|string == s|string %}selected{% endif %}>{{ s }}★ +</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">Smoking</label>
+            <select name="smoking" class="form-select">
+                <option value="">Any</option>
+                <option value="no"  {% if smoking=='no'  %}selected{% endif %}>Non-Smoking</option>
+                <option value="yes" {% if smoking=='yes' %}selected{% endif %}>Smoking</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label fw-500">Room Type</label>
+            <select name="room_function" class="form-select">
+                <option value="">Any</option>
+                <option value="sleeping" {% if room_function=='sleeping' %}selected{% endif %}>Sleeping</option>
+                <option value="meeting"  {% if room_function=='meeting'  %}selected{% endif %}>Meeting</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button type="submit" class="btn w-100" style="background:var(--navy);color:#fff;">Search</button>
+        </div>
+    </form>
+</div>
+
+<!-- ── Stats row ── -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-pill">
+            <strong>{{ available_rooms|length }}</strong>
+            Rooms Available ({{ start_date }} to {{ end_date }})
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-pill">
+            <strong>{{ arrivals|length }}</strong>
+            Arrivals / Check-ins
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-pill">
+            {% if top_room %}
+            <strong>#{{ top_room.roomNumber }}</strong>
+            Most Booked Room ({{ top_room.total_times_booked }}×)
+            {% else %}
+            <strong>N/A</strong>
+            Most Booked Room
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- ── Available Rooms ── -->
+    <div class="col-lg-7">
+        <h2 class="section-title">Available Rooms</h2>
+        {% if available_rooms %}
+        <div class="card">
+            <div class="table-responsive room-table-scroll">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead style="background:#1a2535;color:#fff;">
+                        <tr>
+                            <th class="ps-3">Room #</th>
+                            <th>Rating</th>
+                            <th>Rate / Night</th>
+                            <th>Function</th>
+                            <th>Status</th>
+                            <th>Smoking</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rm in available_rooms %}
+                        <tr class="room-row">
+                            <td class="ps-3 fw-bold">{{ rm.roomNumber }}</td>
+                            <td>{{ '★' * rm.roomRating }}{{ '☆' * (5 - rm.roomRating) }}</td>
+                            <td>${{ "%.2f"|format(rm.roomRate) }}</td>
+                            <td>{{ rm.roomFunction.replace('_', ' ')|title }}</td>
+                            <td><span class="badge bg-success bg-opacity-75">{{ rm.roomStatus }}</span></td>
+                            <td>
+                                {% if rm.isSmoking %}
+                                <span class="tag tag-smoke">Smoking</span>
+                                {% else %}
+                                <span class="tag tag-no-smoke">Non-Smoking</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">No rooms match your filters for this date range.</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Check-ins / Arrivals ── -->
+    <div class="col-lg-5">
+        <h2 class="section-title">Arrivals ({{ start_date }} to {{ end_date }})</h2>
+        {% if arrivals %}
+        <div class="card arrivals-scroll">
+            <ul class="list-group list-group-flush">
+                {% for res in arrivals %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>ID: {{ res.reservationId }}</strong>
+                        <div class="text-muted small">{{ res.first_name|title }} {{ res.last_name|title }}</div>
+                    </div>
+                    <span class="badge rounded-pill" style="background:var(--gold);color:#fff;">
+                        {{ res.guestCount }} guest{{ 's' if res.guestCount != 1 }}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="alert alert-info">No arrivals in this date range.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Top Corporate Clients Pie Chart ── -->
+<div class="row g-4 mt-2">
+    <div class="col-lg-8">
+        <h2 class="section-title">Top Corporate Clients</h2>
+        <div class="card p-3">
+            <canvas id="topCorpChart" height="280"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+new Chart(document.getElementById('topCorpChart'), {
+    type: 'pie',
+    data: {
+        labels: {{ top_corp_labels | safe }},
+        datasets: [{
+            label: 'Total Spend',
+            data: {{ top_corp_spend | safe }},
+            backgroundColor: ['#1a2535', '#c9a84c', '#8e44ad', '#16a085', '#e67e22'],
+            borderColor: '#ffffff',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'right' } }
+    }
+});
+</script>
+{% endblock %}

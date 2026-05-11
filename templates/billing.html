@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Billing Breakdown{% endblock %}
+
+{% block extra_head %}
+<style>
+.section-title { font-family:'Playfair Display',serif; color:var(--navy); border-bottom:2px solid var(--gold); padding-bottom:.3rem; margin-bottom:1.25rem; }
+.total-row { background:#1a2535; color:#fff; font-weight:700; }
+.charge-type { font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-1">Billing Breakdown</h1>
+<p class="text-muted mb-4">Charges by reservation and monthly revenue trends</p>
+
+<!-- ── Reservation selector ── -->
+<div class="card p-3 mb-4" style="max-width:560px;">
+    <form method="GET" action="{{ url_for('billing') }}">
+        <label class="form-label fw-bold">Search by Name or Reservation ID</label>
+        <div class="row g-2">
+            <div class="col-md-5">
+                <select name="hotel_id" class="form-select">
+                    <option value="">All Hotels</option>
+                    {% for h in hotels %}
+                    <option value="{{ h.hotelId }}" {% if selected_hotel_id == h.hotelId %}selected{% endif %}>{{ h.hotelName }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <input
+                    type="text"
+                    name="q"
+                    class="form-control"
+                    value="{{ search_query }}"
+                    placeholder="e.g., 123 or Alice Brown"
+                >
+            </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn" style="background:var(--navy);color:#fff;">Search</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ── Charge table ── -->
+<h2 class="section-title">
+    {% if search_query %}
+    Charges matching "{{ search_query }}"
+    {% else %}
+    All Charges
+    {% endif %}
+</h2>
+<div class="card mb-4">
+    <div class="table-responsive billing-table-scroll">
+        <table class="table table-hover align-middle mb-0">
+            <thead style="background:#1a2535;color:#fff;">
+                <tr>
+                    <th class="ps-3">Res ID</th>
+                    <th>Guest</th>
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>Date Billed</th>
+                    <th>Date Paid</th>
+                    <th>Method</th>
+                    <th class="text-end pe-3">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in charges %}
+                <tr>
+                    <td class="ps-3 fw-bold">{{ c.reservationId }}</td>
+                    <td>{{ c.guest_name }}</td>
+                    <td class="ps-3 text-muted small">{{ c.chargeId }}</td>
+                    <td><span class="charge-type">{{ c.chargeType }}</span></td>
+                    <td>{{ c.dateBilled }}</td>
+                    <td>{{ c.datePaid or '—' }}</td>
+                    <td>{{ c.paymentMethod }}</td>
+                    <td class="text-end pe-3 fw-bold">${{ "{:,.2f}".format(c.amount) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-3">No charges found for this search.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if charges %}
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="7" class="ps-3 py-2">Total</td>
+                    <td class="text-end pe-3" style="color:var(--gold);">${{ "{:,.2f}".format(total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- ── Revenue chart ── -->
+<h2 class="section-title">Monthly Revenue by Hotel</h2>
+<div class="card p-3">
+    <canvas id="revChart" height="280"></canvas>
+</div>
+
+<script>
+new Chart(document.getElementById('revChart'), {
+    type: 'line',
+    data: {
+        labels: {{ rev_labels | safe }},
+        datasets: {{ rev_datasets | safe }}
+    },
+    options: {
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12 } },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ' ' + ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString()
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() }, grid: { color: '#eee' } },
+            x: { grid: { display: false }, ticks: { maxRotation: 45 } }
+        }
+    }
+});
+</script>
+{% endblock %}
+
